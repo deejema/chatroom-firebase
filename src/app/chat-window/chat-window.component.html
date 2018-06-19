@@ -1,0 +1,36 @@
+<!--<p>
+  Chat Window displays "Username: Message"
+</p>
+<ul class="chatLog">
+	<li *ngFor="let message of chatLog">
+			<span class="badge">{{message.username}} : {{message.content}} </span>
+	</li>
+</ul>
+
+<p>
+ Enter Message (100 char max)
+</p>
+<div>
+	<label>Message:
+		<input #message (keyup.enter)="add(message.value); message.value='';" maxlength="100"/>
+	</label>
+	
+  <button (click)="add(message.value); message.value='';">
+    Add
+  </button>
+</div>
+-->
+
+<div id="wrapper">
+    <div id="menu">
+        <p class="welcome">Welcome, {{ username }}<b></b></p>
+        <div style="clear:both"></div>
+    </div>
+     
+    <div id="chatbox" #scrollMe [scrollTop]="scrollMe.scrollHeight"><p id="chatboxp" *ngFor="let message of chatLog">{{message.username}} : {{message.content}}<br/></p></div>
+   	<label>Message:
+		<input #message (keyup.enter)="add(message.value); message.value='';" maxlength="100"/>
+	</label>
+	<button id="sendmessage"(click)="add(message.value); message.value='';"> Send </button>    
+</div>
+	
