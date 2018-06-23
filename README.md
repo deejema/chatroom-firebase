@@ -2,7 +2,10 @@
 
 Simple Chatroom using Angular and Firebase
 
+Be sure to check firebase database key is entered in \src\environments\firebase.config.ts
+
 ng build to build project
+
 firebase init to host project
 
 -When asked what folder to set it to, set to dist (where build is accessed)
@@ -10,6 +13,7 @@ firebase init to host project
 -When asked to change URLs to dist/index.html, say yes
 
 -When asked to overwrite index.html, say no
+
 
 
 References
