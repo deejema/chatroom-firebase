@@ -2,115 +2,60 @@ import { Injectable, Inject } from '@angular/core';
 import { ChatLine } from './chatline';
 import { MessageService } from './message.service';
 
+// Firebase
+import { initializeApp, database } from 'firebase';
+import { AngularFireDatabase, AngularFireList } from 'angularfire2/database'; // AngularFire, FirebvaseListObservable
+
 // Used for Http Requests
 import { Observable } from 'rxjs/Observable'; // Class from RxJS library
 import { of } from 'rxjs/observable/of';
 import { Http, Headers, Request } from '@angular/http';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { catchError, map, tap } from 'rxjs/operators';
-import * as Parse from 'parse';
-import 'rxjs/add/operator/map';
-import 'rxjs/add/operator/catch';
-const httpOptions = {
-	headers: new HttpHeaders({ 
-		'Content-Type': 'application/json',
-		'X-Parse-Application-Id': "12345",
-		'X-Parse-Master-Key': "masterkey" })
-};
-
-
-// Used for bidirectional communication - used for updating client when server is updated
-import * as io from 'socket.io-client';
-
-
 
 /*
 	Service that deals with chat-related functionality such as obtaining messages from the server
 	and adding messages to the server
 */
 @Injectable()
-//@Inject(HttpClient)
 export class ChatService {
-	
-	cLog: ChatLine[]=[];
-	private uri = 'https://desolate-bayou-57447.herokuapp.com/parse/';
-	//private uri = 'https://desolate-bayou-57447.herokuapp.com/';
-	//private uri = 'http://localhost:3000/';
-	//cLog: string[]=[];  // string ver
-	private socket;
+
 	username: string;
-	private credientalHeaders: HttpHeaders; 
-	private subscription;
+	private chatlog;
 	
 	constructor(private messageService: MessageService,
-				private http: HttpClient) { 
+				private http: HttpClient,
+				private af: AngularFireDatabase) { 
 		
-
-		this.credientalHeaders = new HttpHeaders({
-		  'X-Parse-Application-Id': "12345",
-		  'X-Parse-Master-Key': "masterkey"
-		});
+		this.initFirebaseDatabase();
 				
 	}
-	
-	/** Initializes Live Query Client, detects to see if subscription is successful */
-	initLiveQuery(): void {
-		// Initialize LiveQuery Client
-		var Parse = require('parse');
-		Parse.initialize("12345", 'abs', "masterkey");
-		Parse.serverURL = 'https://desolate-bayou-57447.herokuapp.com/parse';
-
-		// Subscription
-		let query = new Parse.Query('chat');
-		this.subscription = query.subscribe();
-		console.log ("Subscription Attempted")
+	/** Initializes Firebase synchronization with the database */
+	initFirebaseDatabase(): void {
+		this.chatlog = this.af.list('chatlog').valueChanges();
+		// valueChanges() - Returns and Observable of data as a synchronized array of JSON objects.
+		// 		All Snapshot metadata is stripped and just the method provides only the data.
+		// 		Use for just needing a list of data.
+		//		Do not use when you need a more complex data structure than an array
 		
-		this.subscription.on('open', function(obj) {
-				console.log('Subscription opened from client');
-		});		
-
+		// snapshotChanges() - Returns an Observable of data as a synchronized array of AngularFireAction<DatabaseSnapshot>[].
+		//		Use when you need a list of a data but also want to keep around metadata.
+		//			Provides DatabaseReference and snapshot key.  Key makes it eaier to use data manipulation methods
+		//				Method controlled by type property.  type property on each AngularFireAction is useful for ngrx reducers, form states, and animation states
+		//		Do not use when you need a more complex data than an array 
 	}
 	
-	/** Gets another user's message when server creates */
-	getLiveQueryMessage(): Observable<ChatLine> {
-		return new Observable<ChatLine>(obs => {
-			this.subscription.on('create', (data) => {
-				
-				console.log(data.attributes); // Displays attribute in console
-				
-				// Pushes chatline to subscription
-				obs.next({username: data.get("username"), content:data.get("content")});
-			});
-		});
-	}
-
-	
-
-	
-	/** Get chat log from server */
-	getChatFromServer() : Observable<ChatLine[]> {
-		return this.http.get<ChatLine[]>(`${this.uri}classes/chat`, { headers: this.credientalHeaders })
-			.pipe(
-				tap(chatlog=>this.log(JSON.stringify(chatlog))),
-				catchError(this.handleError('getChatFromServer',[])));
-	}
-
-	//curl -X GET -H "X-Parse-Application-Id: 12345"  -H "X-Parse-Master-Key: masterkey}" -H "Content-Type: application/json" https://desolate-bayou-57447.herokuapp.com/parse/hooks/triggers
-	
-	/** Add a message to the chat log */
-	addMessage(name: string, message: string): Observable<any> {
-		let insertToChat = { username: name, content: message};
-		return this.http.post<ChatLine>(`${this.uri}classes/chat`, insertToChat, httpOptions)
-			.pipe(
-				//tap((chatlog:ChatLine) => this.log(`Adding ${name}: ${message}`)),
-				tap((chatlog:ChatLine) => {
-					//this.socket.emit('new-message',`${name}: ${message}`);
-					this.log(`Added ${name}: ${message}`);
-				}),
-				catchError(this.handleError('addMessage'))
-		);
+	/** Returns chatlog observable */
+	getChatLog() : Observable<any> {
+		return this.chatlog;
 	}
 	
+	/** Pushes new message to server.  Unique ID is generated by the server */
+	pushMessage(u: string, c: string) : void {
+		let itemsRef = this.af.list('chatlog');
+		itemsRef.push({ username: u, content: c });
+	}
+
 	/**	Logs the user into the chatroom */
 	setUsername(name: string): void {
 		this.username = name;
@@ -123,7 +68,11 @@ export class ChatService {
 		return this.username;
 		
 	}
-	
+	clearAllMessages(): void {
+		let itemsRef = this.af.list('chatlog');
+		itemsRef.remove();
+		
+	}
 	/**
 	* Handle Http operation that failed.
 	* Let the app continue.
@@ -148,51 +97,6 @@ export class ChatService {
 		this.messageService.add('ChatService: ' + message);
 	}
 	
-	//---------------------------------------------------------------------------
-	/* Defunct Functions: Keep for reference*/
-	/** Initialize socket for socket io - Called by chat-window */
-	initSocket(): void {
-		// This prompts 'user connected' for console in server.js when service is active
-		this.socket = io(this.uri); 
-	}
-	
-	/** Gets message from broadcast emitted */
-	getSocketMessage(): Observable<ChatLine> { 
-		return new Observable<ChatLine>(observer => {
-		this.socket.on('updateChat', (data) => {
-				/*	convert data String into a ChatLine object */
-				let res = data.split(':');
-				let name = res[0]; // save name 
-				res.shift(); // pop first element in res
-				let message = res.join(':'); // save content, merges array together if more than one ":" exists
-				observer.next({username: name, content: message});
-			});
-		});
-	}
-	/** Sends user message to server*/
-	addSocketMessage(name: string, message: string): Observable<any> {
-		let insertToChat = { username: name, content: message};
-		return this.http.post("/server/chat", JSON.stringify(insertToChat), httpOptions)
-		.pipe(
-				//tap((chatlog:ChatLine) => this.log(`Adding ${name}: ${message}`)),
-				tap((chatlog:ChatLine) => {
-					//this.socket.emit('new-message',`${name}: ${message}`);
-					this.log(`Added ${name}: ${message}`);
-				}),
-				catchError(this.handleError('addMessage'))
-			);
-			//.subscribe(res => this.log(`Added "${name}: ${message} to chatlog"`));
-		//this.cLog.push({ username: name, content: message}); // pushes ChatLine(username, content)
-	}
-	
-	/** Gets log when chat gets updated*/
-	getLog(): Observable<ChatLine[]> {
-		return new Observable<ChatLine[]>(observer => {
-			this.socket.on('updateChat', (data) => observer.next(data));
-		});
-		
-	}
-	//---------------------------------------------------------------------------
-	
+
 	
 }

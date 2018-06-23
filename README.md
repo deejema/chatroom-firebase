@@ -1,11 +1,13 @@
 # ChatroomApp - Firebase
 
-Should be used for firebase
+Simple Chatroom using Angular and Firebase
 
-'ng build' to build
-'node server.js' to start server
+ng build to build project
+firebase init to host project
+	When asked what folder to set it to, set to dist (where build is accessed)
+	When asked to change URLs to dist/index.html, say yes
+	When asked to overwrite index.html, say no
 
 
 References
-https://github.com/igorlima/deploy-express-with-mongoose-on-heroku
-https://github.com/peterantonyrausch/angular2-parse-module/blob/master/parse.service.ts
+https://github.com/angular/angularfire2/blob/master/docs/rtdb/lists.md - Angular2 5.0.0 functionality

@@ -27,10 +27,11 @@
         <div style="clear:both"></div>
     </div>
      
-    <div id="chatbox" #scrollMe [scrollTop]="scrollMe.scrollHeight"><p id="chatboxp" *ngFor="let message of chatLog">{{message.username}} : {{message.content}}<br/></p></div>
+    <div id="chatbox" #scrollMe [scrollTop]="scrollMe.scrollHeight"><p id="chatboxp" *ngFor="let message of chatWindow | async">{{message.username}} : {{message.content}}<br/></p></div>
    	<label>Message:
-		<input #message (keyup.enter)="add(message.value); message.value='';" maxlength="100"/>
+		<input #message (keyup.enter)="addMessage(message.value); message.value='';" maxlength="100"/>
 	</label>
-	<button id="sendmessage"(click)="add(message.value); message.value='';"> Send </button>    
+	<button id="sendmessage"(click)="addMessage(message.value); message.value='';"> Send </button>   
+	<button id="clearmessage"(click)="clearMessages(); message.value='';"> Clear </button>    
 </div>
 	
